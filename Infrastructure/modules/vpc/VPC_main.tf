@@ -34,6 +34,7 @@ resource "aws_subnet" "Managed1" {
   vpc_id            = aws_vpc.VPC.id
   availability_zone = var.Managed_Subnet2_AZ
   cidr_block = "${var.net_prefix}.50.0/24"    #Changed from .222 to .50 + .60
+  map_public_ip_on_launch = true
     tags = {
     Name =  "${var.vpc_name}-Managed-Subnet1"
     }
@@ -43,6 +44,7 @@ resource "aws_subnet" "Managed2" {
   vpc_id            = aws_vpc.VPC.id
   availability_zone = var.Managed_Subnet1_AZ
   cidr_block = "${var.net_prefix}.60.0/24"
+  map_public_ip_on_launch = true
     tags = {
     Name =  "${var.vpc_name}-Managed-Subnet2"
     }
@@ -67,20 +69,20 @@ resource "aws_security_group" "Control_SG" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.source_ip}/32", aws_vpc.VPC.cidr_block]
+    cidr_blocks = [var.source_ip, aws_vpc.VPC.cidr_block]
   }
 
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["${var.source_ip}/32", aws_vpc.VPC.cidr_block]
+    cidr_blocks = [var.source_ip, aws_vpc.VPC.cidr_block]
   }
   ingress {
     from_port   = 3389
     to_port     = 3389
     protocol    = "tcp"
-    cidr_blocks = ["${var.source_ip}/32", aws_vpc.VPC.cidr_block]
+    cidr_blocks = [var.source_ip, aws_vpc.VPC.cidr_block]
   }
 
   egress {
@@ -172,10 +174,10 @@ resource "aws_route_table" "Route_to_NAT" {
 
 resource "aws_route_table_association" "Managed_Subnet1_RTA" {   #Updated RTAs for 2 managed subnets
   subnet_id      = aws_subnet.Managed1.id
-  route_table_id = aws_route_table.Route_to_NAT.id
+  route_table_id = aws_route_table.Internet_Route.id
 }
 
 resource "aws_route_table_association" "Managed_Subnet2_RTA" {
   subnet_id      = aws_subnet.Managed2.id
-  route_table_id = aws_route_table.Route_to_NAT.id
+  route_table_id = aws_route_table.Internet_Route.id
 }
