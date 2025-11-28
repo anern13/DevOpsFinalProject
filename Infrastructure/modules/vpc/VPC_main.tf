@@ -94,11 +94,11 @@ resource "aws_security_group" "Control_SG" {
 }
 
 resource "aws_security_group" "Managed_SG" {
-  name        = "Internal_SSH_SG"
+  name        = "Internal_SSH_SG_v2"
   description = "Allow SSH only from VPC and full internet outbound"
   vpc_id      = aws_vpc.VPC.id
   tags = {
-    Name  = "Internal_SSH_SG"
+    Name  = "Internal_SSH_SG_v2"
   }
 
   ingress {
@@ -116,6 +116,12 @@ resource "aws_security_group" "Managed_SG" {
   ingress {
     from_port   = 443
     to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [aws_vpc.VPC.cidr_block]
+  }
+  ingress {
+    from_port   = 5000
+    to_port     = 5000
     protocol    = "tcp"
     cidr_blocks = [aws_vpc.VPC.cidr_block]
   }
