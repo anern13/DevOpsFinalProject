@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "*-changes-branch" ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  TF_VAR_ec2_image_id_public: ami-0dfc569a8686b9320
+  TF_VAR_ec2_image_id_apps: ami-0dfc569a8686b9320
+  TF_VAR_instance_type: t3.small
+  TF_VAR_source_ip: ${{ vars.SOURCE_IP_CIDR || '0.0.0.0/0' }}
+  TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  TF_VAR_aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+
+jobs:
+  lint-and-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint placeholder
+        run: echo "TODO: add app/unit tests here"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform -chdir=Infrastructure/main fmt -check
+
+      - name: Terraform init
+        run: terraform -chdir=Infrastructure/main init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Terraform plan
+        if: env.TF_VAR_aws_access_key_id != '' && env.TF_VAR_aws_secret_access_key != ''
+        run: terraform -chdir=Infrastructure/main plan -input=false -lock=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Skip plan (no AWS secrets)
+        if: env.TF_VAR_aws_access_key_id == '' || env.TF_VAR_aws_secret_access_key == ''
+        run: echo "Terraform plan skipped; provide AWS secrets in repo settings to enable"
