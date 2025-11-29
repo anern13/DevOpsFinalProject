@@ -9,4 +9,5 @@ variable "source_ip" {}
 
 locals {
   ansible_install_user_data = file("${path.module}/../ansible/user_data.sh")
+  app_install_user_data     = file("${path.module}/app_user_data.sh")
 }

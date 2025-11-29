@@ -19,6 +19,7 @@ resource "aws_instance" "ec2" {
   key_name               = var.key_name
   private_ip             = var.private_ip
   user_data              = var.user_data
+  user_data_replace_on_change = true
   tags = {
     Name  =   var.EC2_Name
   }

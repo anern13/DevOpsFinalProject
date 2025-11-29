@@ -1,0 +1,31 @@
+---
+- name: Install NFS server
+  apt:
+    name: nfs-kernel-server
+    state: present
+    update_cache: true
+
+- name: Create export directory
+  file:
+    path: "{{ nfs_export_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure NFS export
+  lineinfile:
+    path: /etc/exports
+    line: "{{ nfs_export_dir }} {{ nfs_allowed_cidr }}(rw,sync,no_subtree_check,no_root_squash)"
+    create: true
+    state: present
+
+- name: Export NFS shares
+  command: exportfs -ra
+  changed_when: false
+
+- name: Ensure NFS server is running
+  service:
+    name: nfs-kernel-server
+    state: started
+    enabled: true

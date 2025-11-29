@@ -1,0 +1,143 @@
+---
+- name: Ensure required kernel modules are loaded
+  copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Load overlay module
+  command: modprobe overlay
+  changed_when: false
+
+- name: Load br_netfilter module
+  command: modprobe br_netfilter
+  changed_when: false
+
+- name: Configure sysctl for Kubernetes networking
+  copy:
+    dest: /etc/sysctl.d/99-kubernetes-cri.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Apply sysctl params
+  command: sysctl --system
+  changed_when: false
+
+- name: Disable swap
+  command: swapoff -a
+  changed_when: false
+
+- name: Remove swap entry from fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^\s*([^#]\S*\s+)\s+swap\s+'
+    replace: '# \1 swap was disabled for Kubernetes'
+
+- name: Install base packages
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - socat
+      - conntrack
+      - ebtables
+      - ipset
+    state: present
+    update_cache: true
+
+- name: Install containerd
+  apt:
+    name: containerd
+    state: present
+
+- name: Ensure containerd config directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create containerd config
+  command: containerd config default
+  register: containerd_default
+  changed_when: false
+
+- name: Write containerd config
+  copy:
+    dest: /etc/containerd/config.toml
+    content: "{{ containerd_default.stdout }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Use systemd cgroups for containerd
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*)SystemdCgroup = false'
+    replace: '\1SystemdCgroup = true'
+
+- name: Restart containerd
+  service:
+    name: containerd
+    state: restarted
+    enabled: true
+
+- name: Ensure keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download Kubernetes apt key (v1.29 stable)
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key
+    dest: /etc/apt/keyrings/kubernetes-apt-Release.key
+    mode: '0644'
+
+- name: Dearmor Kubernetes apt key
+  command: >
+    gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg /etc/apt/keyrings/kubernetes-apt-Release.key
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  changed_when: false
+
+- name: Add Kubernetes apt repository (v1.29 stable)
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
+    state: present
+    filename: kubernetes
+
+- name: Install kubelet, kubeadm, kubectl
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: true
+
+- name: Hold Kubernetes packages
+  command: apt-mark hold kubelet kubeadm kubectl
+  changed_when: "'marking' in apt_hold.stdout or 'hold' in apt_hold.stdout"
+  register: apt_hold
+
+- name: Enable kubelet service
+  service:
+    name: kubelet
+    enabled: true
