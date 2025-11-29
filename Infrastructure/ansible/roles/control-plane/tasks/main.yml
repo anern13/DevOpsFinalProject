@@ -1,0 +1,51 @@
+---
+- name: Check if control plane already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_init_check
+
+- name: Initialize control plane
+  command: >
+    kubeadm init
+    --pod-network-cidr={{ pod_network_cidr }}
+    --service-cidr={{ service_cidr }}
+    --apiserver-advertise-address={{ ansible_default_ipv4.address }}
+    --node-name={{ inventory_hostname }}
+  when: not kubeadm_init_check.stat.exists
+
+- name: Create .kube directory for ubuntu user
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0700'
+
+- name: Copy admin.conf to ubuntu kubeconfig
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ubuntu/.kube/config
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+    remote_src: true
+
+- name: Install Calico CNI
+  command: kubectl apply -f {{ calico_manifest_url }}
+  args:
+    chdir: /home/ubuntu
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: not kubeadm_init_check.stat.exists
+
+- name: Generate join command for workers
+  command: kubeadm token create --print-join-command
+  register: kubeadm_join
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  run_once: true
+
+- name: Set join command fact for workers
+  set_fact:
+    kubeadm_join_command: "{{ kubeadm_join.stdout }}"
+  when: kubeadm_join is defined and kubeadm_join.stdout is defined
