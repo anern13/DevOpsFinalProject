@@ -14,6 +14,7 @@ env:
   TF_VAR_aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
   TF_VAR_aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   TF_VAR_aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+  DOCKERHUB_REPO: ${{ vars.DOCKERHUB_REPO || 'leads-manager' }}
 
 jobs:
   lint-and-plan:
@@ -24,6 +25,21 @@ jobs:
 
       - name: Lint placeholder
         run: echo "TODO: add app/unit tests here"
+
+      - name: Build and push app image
+        if: env.DOCKERHUB_REPO != '' && secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_PASSWORD != ''
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        run: |
+          docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
+          IMAGE="$DOCKERHUB_USERNAME/${{ env.DOCKERHUB_REPO }}:latest"
+          docker build -t "$IMAGE" MidtermProj
+          docker push "$IMAGE"
+
+      - name: Skip Docker build (no Docker Hub secrets)
+        if: env.DOCKERHUB_REPO == '' || secrets.DOCKERHUB_USERNAME == '' || secrets.DOCKERHUB_PASSWORD == ''
+        run: echo "Docker build/push skipped; set DOCKERHUB_USERNAME/DOCKERHUB_PASSWORD secrets to enable"
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
