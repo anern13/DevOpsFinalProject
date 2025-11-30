@@ -1,10 +1,7 @@
 aws_access_key_id=""
 aws_secret_access_key=""
 aws_session_token=""
-source_ip       =   "10.0.0.172"
 
-ec2_image_id_public     = "ami-0dfc569a8686b9320"   #Ubuntu 22 @US-East-2
-ec2_image_id_apps       = "ami-0dfc569a8686b9320"   
+ec2_image_id_public     = "ami-024e6efaf93d85776"   # Ubuntu 22.04 LTS @ us-east-2
+ec2_image_id_apps       = "ami-024e6efaf93d85776"
 instance_type           = "t3.small"
-
-
