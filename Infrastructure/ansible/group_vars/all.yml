@@ -1,0 +1,6 @@
+k8s_version: "1.29.4-00"
+pod_network_cidr: "10.244.0.0/16"
+service_cidr: "10.96.0.0/12"
+nfs_export_dir: "/srv/nfs/kubedata"
+nfs_allowed_cidr: "172.20.0.0/16"
+calico_manifest_url: "https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/calico.yaml"

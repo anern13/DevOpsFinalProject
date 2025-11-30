@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: read
     steps:
+<<<<<<< HEAD
       - name: Checkout infra repo
         uses: actions/checkout@v4
 
@@ -22,6 +23,11 @@ jobs:
           repository: anern13/MidtermProj
           path: MidtermProj
 
+=======
+      - name: Checkout
+        uses: actions/checkout@v4
+
+>>>>>>> a845ca7066b7918b2944364dbf30cb28616b2435
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

@@ -1,0 +1,11 @@
+---
+- name: Check if worker already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+- name: Join worker to cluster
+  command: "{{ hostvars[groups['control'][0]].kubeadm_join_command }} --node-name {{ inventory_hostname }}"
+  when:
+    - not kubelet_conf.stat.exists
+    - hostvars[groups['control'][0]].kubeadm_join_command is defined
